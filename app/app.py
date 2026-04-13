@@ -112,7 +112,7 @@ with st.expander("About this app / How to use it", expanded=False):
     - **Traffic category** — what kind of application generated it: Streaming, Chat, VoIP, File Transfer, or C2 (command-and-control / malware-like)
     - **VPN status** — whether the flow is tunneled through a VPN
 
-    The models were trained on the [VNAT dataset](https://www.ll.mit.edu/r-d/datasets/vnat-dataset) from MIT Lincoln Laboratory,
+    The models were trained on the [VNAT dataset](https://www.ll.mit.edu/r-d/datasets/vpnnonvpn-network-application-traffic-dataset-vnat) from MIT Lincoln Laboratory,
     which contains labeled packet captures of real application traffic.
 
     ---
