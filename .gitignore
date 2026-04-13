@@ -18,8 +18,12 @@ env/
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb_checkpoints
-lincoln_data.ipynb
 
 # OS
 .DS_Store
 Thumbs.db
+
+VNAT_Project_Plan.md
+SKILL.md
+VNAT_Dataframe_release.h5
+VNAT_Feature_Datafram_release.h5

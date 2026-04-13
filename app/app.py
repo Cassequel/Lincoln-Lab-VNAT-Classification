@@ -52,7 +52,11 @@ input_mode = st.sidebar.radio(
 )
 
 if input_mode == "Choose example flow":
-    category_filter = st.sidebar.selectbox("Filter by category", ["Any"] + sorted(y_ref.unique()))
+    category_filter = st.sidebar.selectbox(
+        "Filter by category",
+        ["Any"] + sorted(y_ref.unique()),
+        help="Narrow the sample pool to flows of a specific traffic type. 'Any' shows all categories.",
+    )
     if category_filter != "Any":
         pool = X_ref[y_ref == category_filter]
         pool_labels = y_ref[y_ref == category_filter]
@@ -60,7 +64,11 @@ if input_mode == "Choose example flow":
         pool = X_ref
         pool_labels = y_ref
 
-    sample_idx = st.sidebar.slider("Sample index", 0, len(pool) - 1, 0)
+    sample_idx = st.sidebar.slider(
+        "Sample index",
+        0, len(pool) - 1, 0,
+        help="Scroll through individual flows in the selected category pool. Each index is one network flow from the test set.",
+    )
     x_input = pool.iloc[[sample_idx]]
     true_label = pool_labels.iloc[sample_idx]
     st.sidebar.caption(f"True label: **{true_label}**")
@@ -69,6 +77,7 @@ else:
     uploaded = st.sidebar.file_uploader(
         "Upload a single-row CSV with the same columns as data/features.csv",
         type="csv",
+        help="The CSV must have exactly one data row and the same feature column names as data/features.csv. Label columns (is_vpn, app, category) are ignored if present.",
     )
     if uploaded is None:
         st.info("Upload a CSV row in the sidebar to get a prediction.")
@@ -92,6 +101,40 @@ st.caption(
     "using only packet metadata — no payload inspection. "
     "Built on MIT Lincoln Laboratory's VNAT dataset."
 )
+
+with st.expander("About this app / How to use it", expanded=False):
+    st.markdown("""
+    ### What does this do?
+    Modern network traffic is almost entirely encrypted, which means you can't read the payload to figure out
+    what kind of traffic it is. This app uses **machine learning on packet metadata alone** (timing, packet sizes,
+    inter-arrival times, flow statistics — never the payload content) to classify a network flow into:
+
+    - **Traffic category** — what kind of application generated it: Streaming, Chat, VoIP, File Transfer, or C2 (command-and-control / malware-like)
+    - **VPN status** — whether the flow is tunneled through a VPN
+
+    The models were trained on the [VNAT dataset](https://www.ll.mit.edu/r-d/datasets/vnat-dataset) from MIT Lincoln Laboratory,
+    which contains labeled packet captures of real application traffic.
+
+    ---
+    ### How to use it
+    1. **Pick an input method** in the left sidebar:
+       - *Choose example flow* — browse flows from the test dataset by category and index
+       - *Upload feature CSV row* — upload your own pre-computed feature row (same columns as `data/features.csv`)
+    2. **Read the prediction cards** at the top — Traffic Category and VPN Status with confidence scores.
+       If you're using an example flow, a third card shows the ground-truth label so you can see if the model got it right.
+    3. **Explore the charts** below:
+       - *Category confidence scores* — how confident the model is across all categories
+       - *Feature importance (SHAP)* — which features drove this specific prediction
+       - *PCA scatter* — where this flow sits relative to all training flows
+    4. **Expand "Raw feature values"** at the bottom to see the exact numbers fed into the model.
+
+    ---
+    ### What is a "flow"?
+    A network flow is a sequence of packets between two endpoints sharing the same source/destination IP, port, and protocol.
+    Each flow is summarized into ~30 statistical features (mean packet size, inter-arrival time variance, etc.) — no raw bytes, no payload.
+    """)
+
+st.divider()
 
 col1, col2, col3 = st.columns(3)
 
@@ -146,7 +189,7 @@ with col_a:
     }).sort_values("Probability", ascending=True)
 
     fig, ax = plt.subplots(figsize=(5, 3))
-    bars = ax.barh(prob_df["Category"], prob_df["Probability"],
+    bars = ax.barh(prob_df["Category"].to_numpy(), prob_df["Probability"].to_numpy(),
                    color=[CATEGORY_COLORS.get(c, "#888") for c in prob_df["Category"]])
     ax.set_xlim(0, 1)
     ax.set_xlabel("Probability")
@@ -182,6 +225,11 @@ with col_b:
     fig2.tight_layout()
     st.pyplot(fig2)
     plt.close()
+    st.caption(
+        "**How to read this:** Each bar shows how much a feature pushed the model toward (red) or away from (blue) "
+        f"the predicted class **{cat_pred}**. Longer bars = stronger influence. "
+        "Features are packet-level statistics — e.g. mean inter-arrival time, payload length variance — never raw payload content."
+    )
 
 st.divider()
 
@@ -216,6 +264,11 @@ ax3.legend(markerscale=2, fontsize=8, loc="best")
 fig3.tight_layout()
 st.pyplot(fig3)
 plt.close()
+st.caption(
+    "**How to read this:** Each dot is a flow from the training set, colored by its true category. "
+    "The ★ is the flow you're inspecting. PCA compresses ~30 features into 2 dimensions so you can see "
+    "whether this flow sits cleanly inside its predicted cluster or near a boundary (which may explain lower confidence)."
+)
 
 # ── Raw feature values ──────────────────────────────────────────────────────────
 with st.expander("Raw feature values for this flow"):
